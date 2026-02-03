@@ -56,7 +56,22 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.mangala</groupId>
+            <artifactId>common-security</artifactId>
+        </dependency>
+
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.mangala</groupId>
+                <artifactId>common-security</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
