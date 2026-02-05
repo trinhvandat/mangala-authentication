@@ -22,6 +22,7 @@ application:
       rp:
         id: ${RP_ID}
         name: ${RP_NAME}
+        origin: ${RP_ORIGIN}
       timeout: ${PASSKEY_TIMEOUT}
       authenticator:
         attachment: ${PASSKEY_AUTHENTICATOR_ATTACHMENT:platform}

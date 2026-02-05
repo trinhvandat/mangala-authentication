@@ -4,8 +4,13 @@ import org.mangala.authentication.passkey.domain.UserPasskeyEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface UserPasskeyRepository extends JpaRepository<UserPasskeyEntity, UUID> {
+
+    boolean existsByCredentialId(byte[] credentialId);
+
+    Optional<UserPasskeyEntity> findByCredentialId(byte[] credentialId);
 }
