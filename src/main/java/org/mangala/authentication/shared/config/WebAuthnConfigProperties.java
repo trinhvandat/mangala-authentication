@@ -26,6 +26,7 @@ public class WebAuthnConfigProperties {
     public static class RelyingParty {
         private String id;
         private String name;
+        private String origin; // e.g., "https://example.com" - required for WebAuthn verification
     }
 
     @Data

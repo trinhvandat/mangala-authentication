@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Registration Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .step {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Passkey Registration Test</h1>
+        <p>Test the complete passkey registration flow</p>
+
+        <div class="step">
+            <strong>Step 1:</strong> Enter your email (optional)
+        </div>
+        <input type="email" id="email" placeholder="Email (optional, leave empty for anonymous)" />
+
+        <button onclick="testRegistration()" id="registerBtn">
+            🚀 Start Registration
+        </button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+
+        async function testRegistration() {
+            const resultDiv = document.getElementById('result');
+            const registerBtn = document.getElementById('registerBtn');
+            const email = document.getElementById('email').value.trim();
+
+            registerBtn.disabled = true;
+            resultDiv.innerHTML = '';
+
+            try {
+                // Step 1: Start Registration
+                log('info', '📡 Step 1: Calling /v1/register/passkeys:start...');
+
+                const url = email
+                    ? `${API_BASE}/v1/register/passkeys:start?email=${encodeURIComponent(email)}`
+                    : `${API_BASE}/v1/register/passkeys:start`;
+
+                const startResponse = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'User-Agent': navigator.userAgent
+                    }
+                });
+
+                if (!startResponse.ok) {
+                    const errorData = await startResponse.json();
+                    throw new Error(`Start registration failed: ${errorData.message || startResponse.statusText}`);
+                }
+
+                const options = await startResponse.json();
+                log('success', '✅ Step 1 Success! Got registration options');
+                log('info', JSON.stringify(options, null, 2));
+
+                // Step 2: Create Credential (Browser WebAuthn API)
+                log('info', '\n🔑 Step 2: Creating passkey with browser...');
+                log('info', '(You may see a browser prompt to use Touch ID, Face ID, or Windows Hello)');
+
+                const publicKeyOptions = {
+                    challenge: base64UrlToUint8Array(options.challenge),
+                    rp: options.rp,
+                    user: {
+                        id: base64UrlToUint8Array(options.user.id),
+                        name: options.user.name,
+                        displayName: options.user.displayName
+                    },
+                    pubKeyCredParams: options.pubKeyCredParams,
+                    timeout: options.timeout,
+                    attestation: options.attestation,
+                    authenticatorSelection: options.authenticatorSelection
+                };
+
+                const credential = await navigator.credentials.create({
+                    publicKey: publicKeyOptions
+                });
+
+                if (!credential) {
+                    throw new Error('Failed to create credential');
+                }
+
+                log('success', '✅ Step 2 Success! Passkey created');
+
+                // Step 3: Complete Registration
+                log('info', '\n📡 Step 3: Calling /v1/register/passkeys:complete...');
+
+                const completeResponse = await fetch(`${API_BASE}/v1/register/passkeys:complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': navigator.userAgent
+                    },
+                    body: JSON.stringify({
+                        sessionId: options.sessionId || extractSessionIdFromOptions(options),
+                        credential: {
+                            id: credential.id,
+                            rawId: arrayBufferToBase64Url(credential.rawId),
+                            type: credential.type,
+                            response: {
+                                clientDataJSON: arrayBufferToBase64Url(credential.response.clientDataJSON),
+                                attestationObject: arrayBufferToBase64Url(credential.response.attestationObject),
+                                transports: credential.response.getTransports ? credential.response.getTransports() : []
+                            }
+                        },
+                        authenticatorAttachment: credential.authenticatorAttachment
+                    })
+                });
+
+                if (!completeResponse.ok) {
+                    const errorData = await completeResponse.json();
+                    throw new Error(`Complete registration failed: ${errorData.message || completeResponse.statusText}`);
+                }
+
+                const result = await completeResponse.json();
+                log('success', '✅ Step 3 Success! Registration Complete!');
+                log('success', '\n🎉 REGISTRATION SUCCESSFUL!\n\n' + JSON.stringify(result, null, 2));
+
+                // Show database verification instructions
+                log('info', '\n📊 Verify in database:\nSELECT * FROM auth.users WHERE id = \'' + result.userId + '\';\nSELECT * FROM auth.user_passkeys WHERE user_id = \'' + result.userId + '\';');
+
+            } catch (error) {
+                log('error', '❌ Error: ' + error.message);
+                console.error('Full error:', error);
+            } finally {
+                registerBtn.disabled = false;
+            }
+        }
+
+        function log(type, message) {
+            const resultDiv = document.getElementById('result');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            resultDiv.appendChild(div);
+        }
+
+        function base64UrlToUint8Array(base64Url) {
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const padding = '='.repeat((4 - base64.length % 4) % 4);
+            const base64Padded = base64 + padding;
+            const rawData = atob(base64Padded);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function arrayBufferToBase64Url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+
+        function extractSessionIdFromOptions(options) {
+            // If sessionId is not directly in options, it might need to be extracted
+            // For now, we'll check if it exists
+            return options.sessionId || 'SESSION_ID_NOT_FOUND';
+        }
+
+        // Check WebAuthn support on page load
+        window.addEventListener('load', () => {
+            if (!window.PublicKeyCredential) {
+                document.getElementById('result').innerHTML =
+                    '<div class="result error">❌ Your browser does not support WebAuthn/Passkeys.<br>Please use Chrome, Edge, Safari, or Firefox on a compatible device.</div>';
+                document.getElementById('registerBtn').disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
