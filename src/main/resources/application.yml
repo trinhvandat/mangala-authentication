@@ -30,6 +30,14 @@ application:
         user-verification: ${PASSKEY_AUTHENTICATOR_USER_VERIFICATION:preferred}
       attestation: ${PASSKEY_ATTESTATION:none}
       algorithms: ${PASSKEY_ALGORITHMS}
+  security:
+    internal-api:
+      # Set to true to enforce x509 client-cert authentication on /v1/internal/** APIs
+      mtls-enabled: ${INTERNAL_API_MTLS_ENABLED:false}
+      # Extract service identity from certificate subject DN
+      subject-principal-regex: ${INTERNAL_API_SUBJECT_REGEX:CN=(.*?)(?:,|$)}
+      # Allowed internal caller identities (certificate CN by default)
+      allowed-principals: ${INTERNAL_API_ALLOWED_PRINCIPALS:gateway-service}
 
 
 springdoc:
