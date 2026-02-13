@@ -60,12 +60,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Send to Slack
-        if: steps.msg.outputs.text != '' && secrets.SLACK_CHANNEL_WEBHOOK != ''
+        if: steps.msg.outputs.text != ''
         env:
           WEBHOOK: ${{ secrets.SLACK_CHANNEL_WEBHOOK }}
           MESSAGE: ${{ steps.msg.outputs.text }}
         run: |
           set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then
+            echo "SLACK_CHANNEL_WEBHOOK is empty; skip notification."
+            exit 0
+          fi
           payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
           curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK" > /dev/null
 
@@ -97,12 +101,15 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Send to Slack
-        if: secrets.SLACK_CHANNEL_WEBHOOK != ''
         env:
           WEBHOOK: ${{ secrets.SLACK_CHANNEL_WEBHOOK }}
           MESSAGE: ${{ steps.msg.outputs.text }}
         run: |
           set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then
+            echo "SLACK_CHANNEL_WEBHOOK is empty; skip notification."
+            exit 0
+          fi
           payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
           curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK" > /dev/null
 
@@ -143,11 +150,15 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Send to Slack
-        if: steps.msg.outputs.text != '' && secrets.SLACK_CHANNEL_WEBHOOK != ''
+        if: steps.msg.outputs.text != ''
         env:
           WEBHOOK: ${{ secrets.SLACK_CHANNEL_WEBHOOK }}
           MESSAGE: ${{ steps.msg.outputs.text }}
         run: |
           set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then
+            echo "SLACK_CHANNEL_WEBHOOK is empty; skip notification."
+            exit 0
+          fi
           payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
           curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK" > /dev/null
