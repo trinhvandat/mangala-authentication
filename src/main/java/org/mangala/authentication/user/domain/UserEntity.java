@@ -29,7 +29,7 @@ public class UserEntity {
 
     @CreatedBy
     @Column(name = "created_by")
-    private UUID created_by;
+    private UUID createdBy;
 
     @CreatedDate
     @Column(name = "created_at")

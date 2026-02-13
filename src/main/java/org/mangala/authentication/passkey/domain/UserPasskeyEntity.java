@@ -62,7 +62,7 @@ public class UserPasskeyEntity {
     private String deviceName;
 
     @Column(name = "device_type", length = 255)
-    private String device_type;
+    private String deviceType;
 
     @Column(name = "attestation_format", length = 50)
     private String attestationFormat;
