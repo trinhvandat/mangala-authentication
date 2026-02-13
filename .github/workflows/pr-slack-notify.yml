@@ -1,0 +1,153 @@
+name: PR Slack Notifications
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, review_requested, closed]
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: ["Context Sync Check"]
+    types: [completed]
+
+jobs:
+  notify-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build PR message
+        id: msg
+        env:
+          ACTION: ${{ github.event.action }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          REQUESTED_REVIEWER: ${{ github.event.requested_reviewer.login }}
+        run: |
+          set -euo pipefail
+
+          case "$ACTION" in
+            opened|reopened|ready_for_review)
+              MSG="[PR Created] ${REPO}#${PR_NUMBER} - ${PR_TITLE} by @${AUTHOR} | ${HEAD_REF} -> ${BASE_REF} | ${PR_URL}"
+              ;;
+            review_requested)
+              if [ -n "${REQUESTED_REVIEWER}" ] && [ "${REQUESTED_REVIEWER}" != "null" ]; then
+                MSG="[PR Review Requested] ${REPO}#${PR_NUMBER} - ${PR_TITLE} | reviewer: @${REQUESTED_REVIEWER} | ${PR_URL}"
+              else
+                MSG=""
+              fi
+              ;;
+            closed)
+              if [ "${MERGED}" = "true" ]; then
+                MSG="[PR Merged] ${REPO}#${PR_NUMBER} - ${PR_TITLE} | merged by @${AUTHOR} | ${PR_URL}"
+              else
+                MSG="[PR Closed] ${REPO}#${PR_NUMBER} - ${PR_TITLE} | closed without merge | ${PR_URL}"
+              fi
+              ;;
+            *)
+              MSG=""
+              ;;
+          esac
+
+          {
+            echo "text<<EOFMSG"
+            echo "$MSG"
+            echo "EOFMSG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send to Slack
+        if: steps.msg.outputs.text != '' && secrets.SLACK_CHANNEL_WEBHOOK != ''
+        env:
+          WEBHOOK: ${{ secrets.SLACK_CHANNEL_WEBHOOK }}
+          MESSAGE: ${{ steps.msg.outputs.text }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK" > /dev/null
+
+  notify-review:
+    if: github.event_name == 'pull_request_review' && (github.event.review.state == 'approved' || github.event.review.state == 'changes_requested')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build review message
+        id: msg
+        env:
+          STATE: ${{ github.event.review.state }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          REVIEWER: ${{ github.event.review.user.login }}
+        run: |
+          set -euo pipefail
+          if [ "$STATE" = "approved" ]; then
+            MSG="[PR Approved] ${REPO}#${PR_NUMBER} - ${PR_TITLE} | reviewer: @${REVIEWER} | ${PR_URL}"
+          else
+            MSG="[PR Changes Requested] ${REPO}#${PR_NUMBER} - ${PR_TITLE} | reviewer: @${REVIEWER} | ${PR_URL}"
+          fi
+
+          {
+            echo "text<<EOFMSG"
+            echo "$MSG"
+            echo "EOFMSG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send to Slack
+        if: secrets.SLACK_CHANNEL_WEBHOOK != ''
+        env:
+          WEBHOOK: ${{ secrets.SLACK_CHANNEL_WEBHOOK }}
+          MESSAGE: ${{ steps.msg.outputs.text }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK" > /dev/null
+
+  notify-ci:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build CI message
+        id: msg
+        env:
+          REPO: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          PRS_JSON: ${{ toJson(github.event.workflow_run.pull_requests) }}
+        run: |
+          set -euo pipefail
+
+          pr_number=$(echo "$PRS_JSON" | jq -r '.[0].number // empty')
+          pr_url=$(echo "$PRS_JSON" | jq -r '.[0].html_url // empty')
+          pr_title=$(echo "$PRS_JSON" | jq -r '.[0].title // ""')
+
+          if [ -z "$pr_number" ]; then
+            echo "text=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$CONCLUSION" = "success" ]; then
+            MSG="[CI Passed] ${REPO}#${pr_number} - ${pr_title} | workflow: ${WORKFLOW_NAME} | ${RUN_URL}"
+          else
+            MSG="[CI Failed] ${REPO}#${pr_number} - ${pr_title} | workflow: ${WORKFLOW_NAME} | ${RUN_URL}"
+          fi
+
+          {
+            echo "text<<EOFMSG"
+            echo "$MSG"
+            echo "EOFMSG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send to Slack
+        if: steps.msg.outputs.text != '' && secrets.SLACK_CHANNEL_WEBHOOK != ''
+        env:
+          WEBHOOK: ${{ secrets.SLACK_CHANNEL_WEBHOOK }}
+          MESSAGE: ${{ steps.msg.outputs.text }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n --arg text "$MESSAGE" '{text: $text}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$payload" "$WEBHOOK" > /dev/null
