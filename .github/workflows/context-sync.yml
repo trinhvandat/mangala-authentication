@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -33,6 +34,11 @@ jobs:
 
       - name: Run context sync check (script)
         run: ./scripts/check-context-sync.sh
+
+      - name: Verify local modules
+        run: |
+          test -f mangala-common-security/pom.xml
+          test -f mangala-exception/pom.xml
 
       - name: Install local dependency modules
         run: |
