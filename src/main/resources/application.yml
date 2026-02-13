@@ -32,6 +32,12 @@ application:
       algorithms: ${PASSKEY_ALGORITHMS}
 
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
 logging:
   level:
     root: INFO

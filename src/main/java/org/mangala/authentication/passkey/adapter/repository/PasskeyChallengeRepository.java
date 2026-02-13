@@ -18,4 +18,9 @@ public interface PasskeyChallengeRepository extends JpaRepository<PasskeyChallen
     Optional<PasskeyChallengeEntity> findValidRegistrationChallenge(
         @Param("sessionId") String sessionId
     );
+
+    Optional<PasskeyChallengeEntity> findTopByUserIdAndIsUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+            java.util.UUID userId,
+            java.time.LocalDateTime expiresAt
+    );
 }
