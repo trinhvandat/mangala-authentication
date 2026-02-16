@@ -13,13 +13,10 @@ import org.mangala.authentication.passkey.usecase.command.VerifyRegistrationCred
 import org.mangala.authentication.user.adapter.repository.UserRepository;
 import org.mangala.authentication.user.domain.UserEntity;
 import org.mangala.authentication.user.domain.UserNotFoundException;
-import org.mangala.authentication.user.usecase.CreateUserUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -32,7 +29,6 @@ public class CompleteRegistrationUseCaseImpl implements CompleteRegistrationUseC
     private final CheckDuplicateCredentialUseCase checkDuplicateCredentialUseCase;
     private final SavePasskeyUseCase savePasskeyUseCase;
     private final MarkChallengeAsUsedUseCase markChallengeAsUsedUseCase;
-    private final CreateUserUseCase createUserUseCase;
     private final UserRepository userRepository;
 
     @Override
@@ -110,16 +106,13 @@ public class CompleteRegistrationUseCaseImpl implements CompleteRegistrationUseC
     }
 
     private UserEntity getUserForChallenge(PasskeyChallengeEntity challenge) {
-        if (challenge.getUserId() != null) {
-            // User was created during start registration (with email)
-            return userRepository.findById(challenge.getUserId())
-                .orElseThrow(UserNotFoundException::new);
-        } else {
-            // Create anonymous user with the user ID from the challenge
-            // The user ID was generated during start registration and sent to client
-            // We need to extract it somehow, but for now, create a new user
-            return createUserUseCase.execute(null, null);
+        if (challenge.getUserId() == null) {
+            log.error("Registration challenge {} has no userId", challenge.getSessionId());
+            throw new UserNotFoundException();
         }
+
+        return userRepository.findById(challenge.getUserId())
+            .orElseThrow(UserNotFoundException::new);
     }
 
     private String extractDeviceName(String userAgent) {

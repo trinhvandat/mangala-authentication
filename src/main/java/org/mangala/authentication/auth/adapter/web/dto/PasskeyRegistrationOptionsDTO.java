@@ -10,6 +10,8 @@ import java.util.List;
 @Builder
 public class PasskeyRegistrationOptionsDTO {
 
+    private String sessionId;
+
     private RelyingPartyDTO rp;
     private UserDTO user;
 

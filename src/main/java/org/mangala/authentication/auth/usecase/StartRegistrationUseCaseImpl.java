@@ -10,13 +10,13 @@ import org.mangala.authentication.passkey.usecase.command.CreatePasskeyChallenge
 import org.mangala.authentication.shared.config.WebAuthnConfigProperties;
 import org.mangala.authentication.user.domain.UserWithEmailExistedException;
 import org.mangala.authentication.user.usecase.CheckUserExistedUseCase;
+import org.mangala.authentication.user.usecase.CreateUserUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -27,35 +27,39 @@ public class StartRegistrationUseCaseImpl implements StartRegistrationUseCase {
 
     private final WebAuthnConfigProperties webAuthnConfigProperties;
     private final CheckUserExistedUseCase checkUserExistedUseCase;
+    private final CreateUserUseCase createUserUseCase;
     private final CreatePasskeyChallengeUseCase createPasskeyChallengeUseCase;
 
     @Override
     public StartRegisterPasskeyResponse execute(String email, String ipAddress, String userAgent) {
         final var sessionId = UUID.randomUUID().toString();
         final var challenge = new DefaultChallenge().getValue();
+        final var normalizedEmail = normalizeEmail(email);
         final var rp = new PublicKeyCredentialRpEntity(
                 webAuthnConfigProperties.getRp().getId(),
                 webAuthnConfigProperties.getRp().getName()
         );
         String username;
         String userDisplayName;
-        if (Objects.nonNull(email)) {
-            if (checkUserExistedUseCase.execute(email)) {
+        if (Objects.nonNull(normalizedEmail)) {
+            if (checkUserExistedUseCase.execute(normalizedEmail)) {
                 throw new UserWithEmailExistedException();
             }
-            username = email;
-            userDisplayName = email;
+            username = normalizedEmail;
+            userDisplayName = normalizedEmail;
         } else {
             username = UUID.randomUUID().toString();
             userDisplayName = username;
         }
+
+        final var persistedUser = createUserUseCase.execute(normalizedEmail, null);
         final var userEntity = new PublicKeyCredentialUserEntity(
-                UUID.randomUUID().toString().getBytes(StandardCharsets.UTF_8),
+                persistedUser.getId().toString().getBytes(StandardCharsets.UTF_8),
                 username,
                 userDisplayName
         );
 
-        createPasskeyChallenge(challenge, sessionId, ipAddress, userAgent);
+        createPasskeyChallenge(challenge, sessionId, ipAddress, userAgent, persistedUser.getId());
 
         AuthenticatorSelectionCriteria authenticatorSelection =
                 new AuthenticatorSelectionCriteria(
@@ -65,6 +69,7 @@ public class StartRegistrationUseCaseImpl implements StartRegistrationUseCase {
                 );
 
         return StartRegisterPasskeyResponse.builder()
+                .sessionId(sessionId)
                 .rp(rp)
                 .user(userEntity)
                 .challenge(challenge)
@@ -76,18 +81,33 @@ public class StartRegistrationUseCaseImpl implements StartRegistrationUseCase {
                 .build();
     }
 
-    private void createPasskeyChallenge(byte[] challenge, String session, String ipAddress, String userAgent) {
+    private void createPasskeyChallenge(
+            byte[] challenge,
+            String session,
+            String ipAddress,
+            String userAgent,
+            UUID userId
+    ) {
         final var expiresAt = LocalDateTime.now().plusSeconds(webAuthnConfigProperties.getTimeout());
         var createPasskeyChallengeCommand = CreatePasskeyChallengeCommand
                 .builder()
                 .operationType(PasskeyChallengeOperationType.REGISTER)
                 .sessionId(session)
                 .challenge(challenge)
+                .userId(userId.toString())
                 .ipAddress(ipAddress)
                 .userAgent(userAgent)
                 .expiresAt(expiresAt)
                 .userVerificationRequirement(webAuthnConfigProperties.getAuthenticator().getUserVerification())
                 .build();
         createPasskeyChallengeUseCase.execute(createPasskeyChallengeCommand);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String trimmed = email.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

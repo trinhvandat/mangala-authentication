@@ -9,6 +9,7 @@ import java.util.List;
 @Builder
 @Data
 public class StartRegisterPasskeyResponse {
+    private String sessionId;
     private PublicKeyCredentialRpEntity rp;
     private PublicKeyCredentialUserEntity user;
     private byte[] challenge;

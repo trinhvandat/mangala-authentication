@@ -75,7 +75,7 @@ public class CompleteAuthenticationUseCaseImpl implements CompleteAuthentication
                 signature,
                 userHandle,
                 passkey.getPublicKey(),
-                new String(challenge.getChallenge()),
+                Base64UrlUtil.encodeToString(challenge.getChallenge()),
                 webAuthnConfig.getRp().getId(),
                 webAuthnConfig.getRp().getOrigin(),
                 true // require user verification
