@@ -34,6 +34,7 @@ public final class PasskeyResponseMapper {
         }
 
         return PasskeyRegistrationOptionsDTO.builder()
+                .sessionId(response.getSessionId())
                 .rp(toRelyingPartyDTO(response.getRp()))
                 .user(toUserDTO(response.getUser()))
                 .challenge(encodeBase64Url(response.getChallenge()))
