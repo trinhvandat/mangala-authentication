@@ -20,7 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties(InternalApiSecurityProperties.class)
+@EnableConfigurationProperties({InternalApiSecurityProperties.class, JwtProperties.class})
 public class InternalApiSecurityConfig {
 
     private static final String INTERNAL_POLICY_READ_AUTHORITY = "INTERNAL_POLICY_READ";

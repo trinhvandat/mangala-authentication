@@ -1,6 +1,7 @@
 package org.mangala.authentication.user.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.mangala.authentication.auth.adapter.repository.UserAuthorizationQueryRepository;
 import org.mangala.authentication.user.adapter.repository.UserRepository;
 import org.mangala.authentication.user.domain.UserEntity;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.util.UUID;
 public class CreateUserUseCaseImpl implements CreateUserUseCase {
 
     private final UserRepository userRepository;
+    private final UserAuthorizationQueryRepository authorizationQueryRepository;
 
     @Override
     public UserEntity execute(String email, UUID userId) {
@@ -31,6 +33,8 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
 
         user.setCreatedAt(LocalDateTime.now());
 
-        return userRepository.save(user);
+        UserEntity persisted = userRepository.save(user);
+        authorizationQueryRepository.assignDefaultRole(persisted.getId());
+        return persisted;
     }
 }

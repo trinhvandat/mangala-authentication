@@ -3,6 +3,11 @@ package org.mangala.authentication.auth.usecase;
 import com.webauthn4j.util.Base64UrlUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.mangala.authentication.auth.adapter.repository.RefreshTokenRepository;
+import org.mangala.authentication.auth.adapter.repository.UserAuthorizationQueryRepository;
+import org.mangala.authentication.auth.domain.RefreshTokenEntity;
+import org.mangala.authentication.auth.token.JwtTokenBundle;
+import org.mangala.authentication.auth.token.JwtTokenService;
 import org.mangala.authentication.auth.usecase.command.CompleteAuthenticationCommand;
 import org.mangala.authentication.auth.usecase.model.CompleteAuthenticationResponse;
 import org.mangala.authentication.passkey.domain.InvalidChallengeTypeException;
@@ -25,7 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.time.ZoneOffset;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -38,6 +44,9 @@ public class CompleteAuthenticationUseCaseImpl implements CompleteAuthentication
     private final UpdatePasskeySignCountUseCase updatePasskeySignCountUseCase;
     private final UserRepository userRepository;
     private final WebAuthnConfigProperties webAuthnConfig;
+    private final JwtTokenService jwtTokenService;
+    private final UserAuthorizationQueryRepository authorizationQueryRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     @Transactional
@@ -101,25 +110,32 @@ public class CompleteAuthenticationUseCaseImpl implements CompleteAuthentication
         UserEntity user = userRepository.findById(passkey.getUserId())
                 .orElseThrow(UserNotFoundException::new);
 
-        // TODO: Generate JWT tokens using common-security module
-        // For now, return placeholder values
-        String accessToken = generatePlaceholderToken(user.getId(), "access");
-        String refreshToken = generatePlaceholderToken(user.getId(), "refresh");
+        List<String> roles = authorizationQueryRepository.findRolesByUserId(user.getId());
+        List<String> permissions = authorizationQueryRepository.findPermissionsByUserId(user.getId());
+
+        JwtTokenBundle tokenBundle = jwtTokenService.issueTokenPair(
+                user.getId(),
+                user.getEmail(),
+                roles,
+                permissions
+        );
+
+        RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity();
+        refreshTokenEntity.setTokenId(tokenBundle.refreshTokenId());
+        refreshTokenEntity.setUserId(user.getId());
+        refreshTokenEntity.setExpiresAt(LocalDateTime.ofInstant(tokenBundle.refreshExpiresAt(), ZoneOffset.UTC));
+        refreshTokenEntity.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        refreshTokenRepository.save(refreshTokenEntity);
 
         log.info("Authentication completed successfully for user: {}", user.getEmail());
 
         return new CompleteAuthenticationResponse(
-                accessToken,
-                refreshToken,
+                tokenBundle.accessToken(),
+                tokenBundle.refreshToken(),
                 "Bearer",
-                3600L, // 1 hour
+                tokenBundle.accessExpiresInSeconds(),
                 user.getId(),
                 user.getEmail()
         );
-    }
-
-    private String generatePlaceholderToken(UUID userId, String type) {
-        // TODO: Replace with actual JWT generation from common-security module
-        return "placeholder_" + type + "_token_for_" + userId;
     }
 }
