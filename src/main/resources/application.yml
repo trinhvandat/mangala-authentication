@@ -18,6 +18,13 @@ spring:
 
 application:
   authentication:
+    jwt:
+      secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-signing-replace-in-production}
+      issuer: ${JWT_ISSUER:mangala}
+      access-token-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
+      refresh-token-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
+      refresh-token-audience: ${JWT_REFRESH_AUDIENCE:mangala-auth-refresh}
+      access-token-audience: ${JWT_ACCESS_AUDIENCE:mangala-gateway}
     passkey:
       rp:
         id: ${RP_ID}

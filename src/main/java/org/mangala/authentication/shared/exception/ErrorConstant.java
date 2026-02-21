@@ -28,7 +28,12 @@ public enum ErrorConstant implements ErrorDefinition {
     NO_PASSKEYS_FOUND(HttpStatus.BAD_REQUEST, "0000011", "No passkeys registered for this user."),
     ASSERTION_VERIFICATION_FAILED(HttpStatus.UNAUTHORIZED, "0000012", "Authentication assertion verification failed."),
     SIGN_COUNT_MISMATCH(HttpStatus.UNAUTHORIZED, "0000013", "Sign count mismatch detected. Possible cloned authenticator."),
-    INVALID_CHALLENGE_TYPE(HttpStatus.BAD_REQUEST, "0000014", "Invalid challenge type for operation.");
+    INVALID_CHALLENGE_TYPE(HttpStatus.BAD_REQUEST, "0000014", "Invalid challenge type for operation."),
+
+    // Token errors
+    TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "0000015", "Token is invalid or expired."),
+    REFRESH_TOKEN_REVOKED(HttpStatus.UNAUTHORIZED, "0000016", "Refresh token has been revoked."),
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "0000017", "Refresh token not found.");
 
     private final HttpStatus httpStatus;
     private final String errorCode;

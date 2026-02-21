@@ -10,6 +10,7 @@ import org.mangala.authentication.auth.adapter.web.mapper.PasskeyResponseMapper;
 import org.mangala.authentication.auth.usecase.*;
 import org.mangala.authentication.auth.usecase.command.CompleteAuthenticationCommand;
 import org.mangala.authentication.auth.usecase.command.CompletePasskeyRegistrationCommand;
+import org.mangala.authentication.auth.usecase.command.RefreshTokenCommand;
 import org.mangala.authentication.auth.usecase.command.StartAuthenticationCommand;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,7 @@ public class AuthController {
     private final CompleteRegistrationUseCase completeRegistrationUseCase;
     private final StartAuthenticationUseCase startAuthenticationUseCase;
     private final CompleteAuthenticationUseCase completeAuthenticationUseCase;
+    private final RefreshTokenUseCase refreshTokenUseCase;
     private final AuthenticationResponseMapper authenticationResponseMapper;
 
     @PostMapping("/v1/register/passkeys:start")
@@ -117,6 +119,15 @@ public class AuthController {
         );
 
         var response = completeAuthenticationUseCase.execute(command);
+        return authenticationResponseMapper.toCompletePasskeyAuthenticationResponseDTO(response);
+    }
+
+    @PostMapping("/v1/auth/refresh")
+    @ResponseStatus(HttpStatus.OK)
+    public CompletePasskeyAuthenticationResponseDTO refreshToken(
+            @Valid @RequestBody RefreshTokenRequestDTO requestDTO
+    ) {
+        var response = refreshTokenUseCase.execute(new RefreshTokenCommand(requestDTO.refreshToken()));
         return authenticationResponseMapper.toCompletePasskeyAuthenticationResponseDTO(response);
     }
 }
