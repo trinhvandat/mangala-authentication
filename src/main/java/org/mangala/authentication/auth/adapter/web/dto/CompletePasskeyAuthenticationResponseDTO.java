@@ -17,6 +17,9 @@ public record CompletePasskeyAuthenticationResponseDTO(
         @JsonProperty("expiresIn")
         long expiresIn,
 
+        @JsonProperty("refreshExpiresIn")
+        long refreshExpiresIn,
+
         @JsonProperty("userId")
         UUID userId,
 

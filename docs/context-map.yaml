@@ -54,6 +54,12 @@ security_and_permissions:
     - method: POST
       path: /v1/auth/refresh
       purpose: rotate refresh token and return a new access/refresh token pair
+      response_fields:
+        - accessToken
+        - refreshToken
+        - tokenType
+        - expiresIn
+        - refreshExpiresIn
   jwt_contract:
     access_token_claims:
       - iss

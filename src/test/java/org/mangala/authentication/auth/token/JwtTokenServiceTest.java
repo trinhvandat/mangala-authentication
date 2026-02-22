@@ -10,6 +10,8 @@ import org.mangala.authentication.shared.config.security.JwtProperties;
 import org.mangala.security.SecurityConstants;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -70,6 +72,38 @@ class JwtTokenServiceTest {
         );
 
         assertThrows(InvalidTokenException.class, () -> jwtTokenService.parseAndValidateRefreshToken(bundle.accessToken()));
+    }
+
+    @Test
+    void shouldRejectRefreshTokenWithWrongAudience() {
+        String token = Jwts.builder()
+                .subject(UUID.randomUUID().toString())
+                .issuer(jwtProperties.getIssuer())
+                .audience().add("wrong-audience").and()
+                .id(UUID.randomUUID().toString())
+                .claim(SecurityConstants.CLAIM_TOKEN_TYPE, SecurityConstants.TOKEN_TYPE_REFRESH)
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plusSeconds(3600)))
+                .signWith(Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertThrows(InvalidTokenException.class, () -> jwtTokenService.parseAndValidateRefreshToken(token));
+    }
+
+    @Test
+    void shouldRejectRefreshTokenWithWrongIssuer() {
+        String token = Jwts.builder()
+                .subject(UUID.randomUUID().toString())
+                .issuer("another-issuer")
+                .audience().add(jwtProperties.getRefreshTokenAudience()).and()
+                .id(UUID.randomUUID().toString())
+                .claim(SecurityConstants.CLAIM_TOKEN_TYPE, SecurityConstants.TOKEN_TYPE_REFRESH)
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plusSeconds(3600)))
+                .signWith(Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertThrows(InvalidTokenException.class, () -> jwtTokenService.parseAndValidateRefreshToken(token));
     }
 
     private Claims parseClaims(String token) {
