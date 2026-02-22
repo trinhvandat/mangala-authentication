@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.mangala.authentication.auth.adapter.repository.RefreshTokenRepository;
 import org.mangala.authentication.auth.adapter.repository.UserAuthorizationQueryRepository;
 import org.mangala.authentication.auth.domain.RefreshTokenEntity;
+import org.mangala.authentication.auth.domain.InvalidTokenException;
 import org.mangala.authentication.auth.domain.RefreshTokenNotFoundException;
 import org.mangala.authentication.auth.domain.RefreshTokenRevokedException;
 import org.mangala.authentication.auth.token.JwtTokenBundle;
@@ -35,8 +36,12 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
     public CompleteAuthenticationResponse execute(RefreshTokenCommand command) {
         RefreshTokenClaims claims = jwtTokenService.parseAndValidateRefreshToken(command.refreshToken());
 
-        RefreshTokenEntity currentToken = refreshTokenRepository.findByTokenId(claims.tokenId())
+        RefreshTokenEntity currentToken = refreshTokenRepository.findWithLockByTokenId(claims.tokenId())
                 .orElseThrow(RefreshTokenNotFoundException::new);
+
+        if (!currentToken.getUserId().equals(claims.userId())) {
+            throw new InvalidTokenException();
+        }
 
         if (currentToken.getRevokedAt() != null) {
             throw new RefreshTokenRevokedException();
@@ -76,6 +81,7 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
                 tokenBundle.refreshToken(),
                 "Bearer",
                 tokenBundle.accessExpiresInSeconds(),
+                tokenBundle.refreshExpiresInSeconds(),
                 user.getId(),
                 user.getEmail()
         );

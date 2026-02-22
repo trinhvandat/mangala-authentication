@@ -70,6 +70,7 @@ public class JwtTokenService {
                 refreshToken,
                 refreshJti,
                 jwtProperties.getAccessTokenExpirationSeconds(),
+                jwtProperties.getRefreshTokenExpirationSeconds(),
                 refreshExpiry
         );
     }

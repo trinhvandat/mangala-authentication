@@ -134,6 +134,7 @@ public class CompleteAuthenticationUseCaseImpl implements CompleteAuthentication
                 tokenBundle.refreshToken(),
                 "Bearer",
                 tokenBundle.accessExpiresInSeconds(),
+                tokenBundle.refreshExpiresInSeconds(),
                 user.getId(),
                 user.getEmail()
         );

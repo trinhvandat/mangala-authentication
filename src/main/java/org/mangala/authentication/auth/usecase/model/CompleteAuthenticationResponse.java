@@ -7,6 +7,7 @@ public record CompleteAuthenticationResponse(
         String refreshToken,
         String tokenType,
         long expiresIn,
+        long refreshExpiresIn,
         UUID userId,
         String email
 ) {

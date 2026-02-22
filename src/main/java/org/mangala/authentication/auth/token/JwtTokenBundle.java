@@ -7,6 +7,7 @@ public record JwtTokenBundle(
         String refreshToken,
         String refreshTokenId,
         long accessExpiresInSeconds,
+        long refreshExpiresInSeconds,
         Instant refreshExpiresAt
 ) {
 }
