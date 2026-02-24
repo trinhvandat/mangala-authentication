@@ -1,0 +1,59 @@
+spring:
+
+  application:
+    name: mangala-authentication
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?currentSchema=${DB_SCHEMA}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  flyway:
+    enabled: true
+    schemas: auth
+    default-schema: auth
+    locations: classpath:/migration
+    baseline-on-migrate: true
+
+
+application:
+  authentication:
+    jwt:
+      secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-signing-replace-in-production}
+      issuer: ${JWT_ISSUER:mangala}
+      access-token-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
+      refresh-token-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
+      refresh-token-audience: ${JWT_REFRESH_AUDIENCE:mangala-auth-refresh}
+      access-token-audience: ${JWT_ACCESS_AUDIENCE:mangala-gateway}
+    passkey:
+      rp:
+        id: ${RP_ID}
+        name: ${RP_NAME}
+        origin: ${RP_ORIGIN}
+      timeout: ${PASSKEY_TIMEOUT}
+      authenticator:
+        attachment: ${PASSKEY_AUTHENTICATOR_ATTACHMENT:platform}
+        resident-key: ${PASSKEY_AUTHENTICATOR_RESIDENT_KEY:true}
+        user-verification: ${PASSKEY_AUTHENTICATOR_USER_VERIFICATION:preferred}
+      attestation: ${PASSKEY_ATTESTATION:none}
+      algorithms: ${PASSKEY_ALGORITHMS}
+  security:
+    internal-api:
+      # Set to true to enforce x509 client-cert authentication on /v1/internal/** APIs
+      mtls-enabled: ${INTERNAL_API_MTLS_ENABLED:false}
+      # Extract service identity from certificate subject DN
+      subject-principal-regex: ${INTERNAL_API_SUBJECT_REGEX:CN=(.*?)(?:,|$)}
+      # Allowed internal caller identities (certificate CN by default)
+      allowed-principals: ${INTERNAL_API_ALLOWED_PRINCIPALS:gateway-service}
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    org.flywaydb: DEBUG
