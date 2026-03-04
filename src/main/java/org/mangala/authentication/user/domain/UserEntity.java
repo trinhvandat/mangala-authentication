@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Table(name = "users")
@@ -42,4 +43,12 @@ public class UserEntity {
     @LastModifiedDate
     @Column(name = "last_updated_at")
     private LocalDateTime lastUpdatedAt;
+
+    @PrePersist
+    public void ensureId() {
+        if (Objects.isNull(this.id)) {
+            this.id = UUID.randomUUID();
+        }
+        System.out.println("user email: " + this.email);
+    }
 }

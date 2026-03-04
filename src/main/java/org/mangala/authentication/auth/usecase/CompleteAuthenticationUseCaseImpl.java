@@ -4,7 +4,7 @@ import com.webauthn4j.util.Base64UrlUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mangala.authentication.auth.adapter.repository.RefreshTokenRepository;
-import org.mangala.authentication.auth.adapter.repository.UserAuthorizationQueryRepository;
+import org.mangala.authentication.auth.usecase.UserAuthorizationService;
 import org.mangala.authentication.auth.domain.RefreshTokenEntity;
 import org.mangala.authentication.auth.token.JwtTokenBundle;
 import org.mangala.authentication.auth.token.JwtTokenService;
@@ -45,7 +45,7 @@ public class CompleteAuthenticationUseCaseImpl implements CompleteAuthentication
     private final UserRepository userRepository;
     private final WebAuthnConfigProperties webAuthnConfig;
     private final JwtTokenService jwtTokenService;
-    private final UserAuthorizationQueryRepository authorizationQueryRepository;
+    private final UserAuthorizationService authorizationService;
     private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
@@ -110,8 +110,8 @@ public class CompleteAuthenticationUseCaseImpl implements CompleteAuthentication
         UserEntity user = userRepository.findById(passkey.getUserId())
                 .orElseThrow(UserNotFoundException::new);
 
-        List<String> roles = authorizationQueryRepository.findRolesByUserId(user.getId());
-        List<String> permissions = authorizationQueryRepository.findPermissionsByUserId(user.getId());
+        List<String> roles = authorizationService.findRolesByUserId(user.getId());
+        List<String> permissions = authorizationService.findPermissionsByUserId(user.getId());
 
         JwtTokenBundle tokenBundle = jwtTokenService.issueTokenPair(
                 user.getId(),

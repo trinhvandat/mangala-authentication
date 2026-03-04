@@ -5,5 +5,5 @@ import org.mangala.authentication.auth.usecase.model.StartRegisterPasskeyRespons
 import java.util.Objects;
 
 public interface StartRegistrationUseCase {
-    StartRegisterPasskeyResponse execute(String email, String ipAddress, String userAgent);
+    StartRegisterPasskeyResponse execute(String email, String displayName, String ipAddress, String userAgent);
 }

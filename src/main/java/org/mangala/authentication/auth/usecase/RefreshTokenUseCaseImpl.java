@@ -2,7 +2,7 @@ package org.mangala.authentication.auth.usecase;
 
 import lombok.RequiredArgsConstructor;
 import org.mangala.authentication.auth.adapter.repository.RefreshTokenRepository;
-import org.mangala.authentication.auth.adapter.repository.UserAuthorizationQueryRepository;
+import org.mangala.authentication.auth.usecase.UserAuthorizationService;
 import org.mangala.authentication.auth.domain.RefreshTokenEntity;
 import org.mangala.authentication.auth.domain.InvalidTokenException;
 import org.mangala.authentication.auth.domain.RefreshTokenNotFoundException;
@@ -29,7 +29,7 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
-    private final UserAuthorizationQueryRepository authorizationQueryRepository;
+    private final UserAuthorizationService authorizationService;
 
     @Override
     @Transactional
@@ -56,8 +56,8 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
         UserEntity user = userRepository.findById(claims.userId())
                 .orElseThrow(UserNotFoundException::new);
 
-        List<String> roles = authorizationQueryRepository.findRolesByUserId(user.getId());
-        List<String> permissions = authorizationQueryRepository.findPermissionsByUserId(user.getId());
+        List<String> roles = authorizationService.findRolesByUserId(user.getId());
+        List<String> permissions = authorizationService.findPermissionsByUserId(user.getId());
 
         JwtTokenBundle tokenBundle = jwtTokenService.issueTokenPair(
                 user.getId(),

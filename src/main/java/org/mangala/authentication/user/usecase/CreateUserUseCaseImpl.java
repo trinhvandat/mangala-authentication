@@ -1,7 +1,9 @@
 package org.mangala.authentication.user.usecase;
 
 import lombok.RequiredArgsConstructor;
-import org.mangala.authentication.auth.adapter.repository.UserAuthorizationQueryRepository;
+import org.mangala.authentication.auth.adapter.repository.RoleRepository;
+import org.mangala.authentication.auth.adapter.repository.UserRoleRepository;
+import org.mangala.authentication.auth.domain.UserRoleEntity;
 import org.mangala.authentication.user.adapter.repository.UserRepository;
 import org.mangala.authentication.user.domain.UserEntity;
 import org.springframework.stereotype.Service;
@@ -16,10 +18,12 @@ import java.util.UUID;
 public class CreateUserUseCaseImpl implements CreateUserUseCase {
 
     private final UserRepository userRepository;
-    private final UserAuthorizationQueryRepository authorizationQueryRepository;
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
 
     @Override
     public UserEntity execute(String email, UUID userId) {
+        System.out.println("Email from usecase: " + email);
         UserEntity user = new UserEntity();
 
         if (userId != null) {
@@ -34,7 +38,13 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
         user.setCreatedAt(LocalDateTime.now());
 
         UserEntity persisted = userRepository.save(user);
-        authorizationQueryRepository.assignDefaultRole(persisted.getId());
+
+        roleRepository.findByCodeAndIsActiveTrue("ROLE_USER")
+                .ifPresent(role -> {
+                    UserRoleEntity userRole = UserRoleEntity.create(persisted, role, "system");
+                    userRoleRepository.save(userRole);
+                });
+
         return persisted;
     }
 }

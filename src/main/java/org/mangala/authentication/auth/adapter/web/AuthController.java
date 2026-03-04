@@ -29,12 +29,12 @@ public class AuthController {
     @PostMapping("/v1/register/passkeys:start")
     @ResponseStatus(HttpStatus.OK)
     public PasskeyRegistrationOptionsDTO startRegistration(
-            @RequestParam(required = false) String email,
+            @Valid @RequestBody StartPasskeyRegistrationRequestDTO requestDTO,
             @RequestHeader("User-Agent") String userAgent,
             HttpServletRequest request
     ) {
         String ipAddress = request.getRemoteAddr();
-        var response = startRegistrationUseCase.execute(email, ipAddress, userAgent);
+        var response = startRegistrationUseCase.execute(requestDTO.email(), requestDTO.displayName(), ipAddress, userAgent);
         return PasskeyResponseMapper.toRegistrationOptionsDTO(response);
     }
 
@@ -108,18 +108,21 @@ public class AuthController {
     ) {
         String ipAddress = request.getRemoteAddr();
 
+        var credential = requestDTO.getCredential();
+        var response = credential.getResponse();
+
         var command = new CompleteAuthenticationCommand(
-                requestDTO.credentialId(),
-                requestDTO.authenticatorData(),
-                requestDTO.clientDataJSON(),
-                requestDTO.signature(),
-                requestDTO.userHandle(),
+                credential.getId(),
+                response.getAuthenticatorData(),
+                response.getClientDataJSON(),
+                response.getSignature(),
+                response.getUserHandle(),
                 userAgent,
                 ipAddress
         );
 
-        var response = completeAuthenticationUseCase.execute(command);
-        return authenticationResponseMapper.toCompletePasskeyAuthenticationResponseDTO(response);
+        var result = completeAuthenticationUseCase.execute(command);
+        return authenticationResponseMapper.toCompletePasskeyAuthenticationResponseDTO(result);
     }
 
     @PostMapping("/v1/auth/refresh")

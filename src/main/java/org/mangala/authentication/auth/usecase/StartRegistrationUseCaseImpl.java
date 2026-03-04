@@ -31,10 +31,12 @@ public class StartRegistrationUseCaseImpl implements StartRegistrationUseCase {
     private final CreatePasskeyChallengeUseCase createPasskeyChallengeUseCase;
 
     @Override
-    public StartRegisterPasskeyResponse execute(String email, String ipAddress, String userAgent) {
+    public StartRegisterPasskeyResponse execute(String email, String displayName, String ipAddress, String userAgent) {
         final var sessionId = UUID.randomUUID().toString();
         final var challenge = new DefaultChallenge().getValue();
+        System.out.println("email before normalized: " + email);
         final var normalizedEmail = normalizeEmail(email);
+        System.out.println("email from auth: " + normalizedEmail);
         final var rp = new PublicKeyCredentialRpEntity(
                 webAuthnConfigProperties.getRp().getId(),
                 webAuthnConfigProperties.getRp().getName()
@@ -46,10 +48,10 @@ public class StartRegistrationUseCaseImpl implements StartRegistrationUseCase {
                 throw new UserWithEmailExistedException();
             }
             username = normalizedEmail;
-            userDisplayName = normalizedEmail;
+            userDisplayName = Objects.nonNull(displayName) && !displayName.isBlank() ? displayName : normalizedEmail;
         } else {
             username = UUID.randomUUID().toString();
-            userDisplayName = username;
+            userDisplayName = Objects.nonNull(displayName) && !displayName.isBlank() ? displayName : username;
         }
 
         final var persistedUser = createUserUseCase.execute(normalizedEmail, null);
