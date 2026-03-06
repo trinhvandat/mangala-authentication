@@ -1,0 +1,90 @@
+# =============================================================================
+# .dockerignore for mangala-authentication
+# Excludes files not needed in Docker build context
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build outputs (we build inside Docker)
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# Logs
+*.log
+logs/
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__/
+test/
+tests/
+
+# Documentation (not needed in image)
+*.md
+!README.md
+docs/
+LICENSE
+
+# Docker files (prevent recursion)
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
+.docker/
+
+# Environment files (NEVER include secrets)
+.env
+.env.*
+*.env
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+Jenkinsfile
+.travis.yml
+
+# Claude/AI context files
+.claude/
+AGENTS.md
+CLAUDE.md
+context-map.yaml
+
+# Scripts (not needed in runtime)
+scripts/
+
+# Kubernetes/Helm (not needed in image)
+k8s/
+kubernetes/
+helm/
+charts/
