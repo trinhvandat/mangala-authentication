@@ -1,6 +1,10 @@
 package org.mangala.authentication.auth.adapter.web;
 
 import com.webauthn4j.util.Base64UrlUtil;
+import io.micrometer.core.annotation.Counted;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +29,9 @@ public class AuthController {
     private final CompleteAuthenticationUseCase completeAuthenticationUseCase;
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final AuthenticationResponseMapper authenticationResponseMapper;
+    private final MeterRegistry meterRegistry;
 
+    @Timed("auth.registration.start")
     @PostMapping("/v1/register/passkeys:start")
     @ResponseStatus(HttpStatus.OK)
     public PasskeyRegistrationOptionsDTO startRegistration(
@@ -38,6 +44,7 @@ public class AuthController {
         return PasskeyResponseMapper.toRegistrationOptionsDTO(response);
     }
 
+    @Timed("auth.registration.complete")
     @PostMapping("/v1/register/passkeys:complete")
     @ResponseStatus(HttpStatus.CREATED)
     public CompletePasskeyRegistrationResponseDTO completeRegistration(
@@ -80,6 +87,7 @@ public class AuthController {
             .build();
     }
 
+    @Timed("auth.authentication.start")
     @PostMapping("/v1/authenticate/passkeys:start")
     @ResponseStatus(HttpStatus.OK)
     public PasskeyAuthenticationOptionsDTO startAuthentication(
@@ -99,6 +107,8 @@ public class AuthController {
         return authenticationResponseMapper.toPasskeyAuthenticationOptionsDTO(response);
     }
 
+    @Timed("auth.authentication.complete")
+    @Counted("auth.login.attempts")
     @PostMapping("/v1/authenticate/passkeys:complete")
     @ResponseStatus(HttpStatus.OK)
     public CompletePasskeyAuthenticationResponseDTO completeAuthentication(
@@ -121,10 +131,19 @@ public class AuthController {
                 ipAddress
         );
 
-        var result = completeAuthenticationUseCase.execute(command);
-        return authenticationResponseMapper.toCompletePasskeyAuthenticationResponseDTO(result);
+        try {
+            var result = completeAuthenticationUseCase.execute(command);
+            return authenticationResponseMapper.toCompletePasskeyAuthenticationResponseDTO(result);
+        } catch (Exception e) {
+            Counter.builder("auth.login.failures")
+                    .description("Number of failed authentication attempts")
+                    .register(meterRegistry)
+                    .increment();
+            throw e;
+        }
     }
 
+    @Timed("auth.token.refresh")
     @PostMapping("/v1/auth/refresh")
     @ResponseStatus(HttpStatus.OK)
     public CompletePasskeyAuthenticationResponseDTO refreshToken(

@@ -102,8 +102,7 @@ ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport \
 ENV SPRING_PROFILES_ACTIVE="default"
 
 # Health check using curl
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD curl --fail --silent --max-time 3 http://localhost:8080/actuator/health/liveness || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 CMD curl --fail --silent --max-time 3 http://localhost:8080/actuator/health/liveness || exit 1
 
 # Signal for graceful shutdown
 STOPSIGNAL SIGTERM

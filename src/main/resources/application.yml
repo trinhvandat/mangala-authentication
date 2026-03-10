@@ -1,4 +1,7 @@
 spring:
+  threads:
+    virtual:
+      enabled: true
 
   application:
     name: mangala-authentication
@@ -46,6 +49,20 @@ application:
       # Allowed internal caller identities (certificate CN by default)
       allowed-principals: ${INTERNAL_API_ALLOWED_PRINCIPALS:gateway-service}
 
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 springdoc:
   api-docs:
